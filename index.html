@@ -690,11 +690,21 @@
   function resolverUrlRelativa(origem) {
     if (!origem) return origem;
     if (/^(data:|blob:|https?:|\/\/)/i.test(origem)) return origem;
+    var arquivo = String(origem).trim();
+    if (!arquivo) return origem;
+    var caminho = arquivo.replace(/\\/g, "/");
     try {
-      return new URL(origem, document.baseURI || window.location.href).href;
+      if (!caminho.startsWith("/")) {
+        return new URL("./" + caminho, document.baseURI || window.location.href).href;
+      }
+      return new URL(caminho, document.baseURI || window.location.href).href;
     } catch (e) {
-      return origem;
+      return arquivo;
     }
+  }
+
+  function normalizarNomeArquivoImagem(valor) {
+    return String(valor || "").trim().replace(/\\/g, "/").replace(/^\.\//, "").toLowerCase();
   }
 
   var TIPOS_BASE = [
@@ -736,8 +746,22 @@
   }
 
   function imagemDoIcone(valor) {
-    var item = CATALOGO_ICONES.find(function (icone) { return icone.valor === valor; });
-    return item ? item.arquivo : "";
+    if (!valor) return "";
+    var valorNormalizado = normalizarNomeArquivoImagem(valor);
+    var item = CATALOGO_ICONES.find(function (icone) {
+      var alvo = normalizarNomeArquivoImagem(icone.valor || icone.arquivo || icone.nome || "");
+      return alvo === valorNormalizado || normalizarNomeArquivoImagem(icone.arquivo || "") === valorNormalizado;
+    });
+    if (item) return item.arquivo || "";
+
+    var valorEmTexto = String(valor || "").toLowerCase();
+    if (valorEmTexto.indexOf("mikrotik") >= 0 || valorEmTexto.indexOf("rb/") >= 0 || valorEmTexto.indexOf("roteador") >= 0) return "MIROTIK.png";
+    if (valorEmTexto.indexOf("switch") >= 0) return "SWITCH.jpeg";
+    if (valorEmTexto.indexOf("olt") >= 0) return "OLT.jpeg";
+    if (valorEmTexto.indexOf("retificador") >= 0 || valorEmTexto.indexOf("rps") >= 0) return "RTIFICADOR.jpeg";
+    if (valorEmTexto.indexOf("nobreak") >= 0 || valorEmTexto.indexOf("nobreack") >= 0) return "NOBREAK.jpeg";
+    if (valorEmTexto.indexOf("conversor") >= 0 || valorEmTexto.indexOf("modulo") >= 0 || valorEmTexto.indexOf("volt") >= 0) return "VOLT.jpeg";
+    return "";
   }
 
   function renderizarTiposSugeridos() {
@@ -846,7 +870,7 @@
     if (chave.indexOf("roteador") >= 0 || chave.indexOf("mikrotik") >= 0 || chave.indexOf("rb/") >= 0) return "MIROTIK.png";
     if (chave.indexOf("retificador") >= 0 || chave.indexOf("rps") >= 0) return "RTIFICADOR.jpeg";
     if (chave.indexOf("nobreak") >= 0 || chave.indexOf("nobreack") >= 0) return "NOBREAK.jpeg";
-    if (chave.indexOf("conversor") >= 0 || chave.indexOf("modulo") >= 0) return "VOLT.jpeg";
+    if (chave.indexOf("conversor") >= 0 || chave.indexOf("modulo") >= 0 || chave.indexOf("volt") >= 0) return "VOLT.jpeg";
     return "";
   }
 
@@ -1067,7 +1091,7 @@
           return { poligono: poligono, bbox: b, cx: b.x + b.width / 2, cy: b.y + b.height / 2 };
         } catch (e) { return null; }
       }).filter(Boolean);
-      
+
       var entradasVisuais;
       var saidasVisuais;
 
